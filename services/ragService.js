@@ -1,12 +1,12 @@
 // services/ragService.js
-const axios = require('axios');
-const config = require('../config/config');
-const AIServiceFactory = require('./aiServiceFactory');
-const paperlessService = require('./paperlessService');
+const axios = require("axios");
+const config = require("../config/config");
+const AIServiceFactory = require("./aiServiceFactory");
+const paperlessService = require("./paperlessService");
 
 class RagService {
   constructor() {
-    this.baseUrl = process.env.RAG_SERVICE_URL || 'http://localhost:8000';
+    this.baseUrl = process.env.RAG_SERVICE_URL || "http://localhost:8000";
   }
 
   /**
@@ -19,12 +19,12 @@ class RagService {
       //make test call to the LLM service to check if it is available
       return response.data;
     } catch (error) {
-      console.error('Error checking RAG service status:', error.message);
+      console.error("Error checking RAG service status:", error.message);
       return {
         server_up: false,
         data_loaded: false,
         index_ready: false,
-        error: error.message
+        error: error.message,
       };
     }
   }
@@ -39,11 +39,11 @@ class RagService {
     try {
       const response = await axios.post(`${this.baseUrl}/search`, {
         query,
-        ...filters
+        ...filters,
       });
       return response.data;
     } catch (error) {
-      console.error('Error searching documents:', error);
+      console.error("Error searching documents:", error);
       throw error;
     }
   }
@@ -56,40 +56,48 @@ class RagService {
   async askQuestion(question) {
     try {
       // 1. Get context from the RAG service
-      const response = await axios.post(`${this.baseUrl}/context`, { 
+      const response = await axios.post(`${this.baseUrl}/context`, {
         question,
-        max_sources: 5
+        max_sources: 5,
       });
-      
+
       const { context, sources } = response.data;
-      
+
       // 2. Fetch full content for each source document using doc_id
       let enhancedContext = context;
-      
+
       if (sources && sources.length > 0) {
         // Fetch full document content for each source
         const fullDocContents = await Promise.all(
           sources.map(async (source) => {
             if (source.doc_id) {
               try {
-                const fullContent = await paperlessService.getDocumentContent(source.doc_id);
-                return `Full document content for ${source.title || 'Document ' + source.doc_id}:\n${fullContent}`;
+                const fullContent = await paperlessService.getDocumentContent(
+                  source.doc_id,
+                );
+                return `Full document content for ${source.title || "Document " + source.doc_id}:\n${fullContent}`;
               } catch (error) {
-                console.error(`Error fetching content for document ${source.doc_id}:`, error.message);
-                return '';
+                console.error(
+                  `Error fetching content for document ${source.doc_id}:`,
+                  error.message,
+                );
+                return "";
               }
             }
-            return '';
-          })
+            return "";
+          }),
         );
-        
+
         // Combine original context with full document contents
-        enhancedContext = context + '\n\n' + fullDocContents.filter(content => content).join('\n\n');
+        enhancedContext =
+          context +
+          "\n\n" +
+          fullDocContents.filter((content) => content).join("\n\n");
       }
-      
+
       // 3. Use AI service to generate an answer based on the enhanced context
       const aiService = AIServiceFactory.getService();
-      
+
       // Create a language-agnostic prompt that works in any language
       const prompt = `
         You are a helpful assistant that answers questions about documents.
@@ -113,17 +121,20 @@ class RagService {
       try {
         answer = await aiService.generateText(prompt);
       } catch (error) {
-        console.error('Error generating answer with AI service:', error);
-        answer = "An error occurred while generating an answer. Please try again later.";
+        console.error("Error generating answer with AI service:", error);
+        answer =
+          "An error occurred while generating an answer. Please try again later.";
       }
-      
+
       return {
         answer,
-        sources
+        sources,
       };
     } catch (error) {
-      console.error('Error in askQuestion:', error);
-      throw new Error("An error occurred while processing your question. Please try again later.");
+      console.error("Error in askQuestion:", error);
+      throw new Error(
+        "An error occurred while processing your question. Please try again later.",
+      );
     }
   }
 
@@ -134,13 +145,13 @@ class RagService {
    */
   async indexDocuments(force = false) {
     try {
-      const response = await axios.post(`${this.baseUrl}/indexing/start`, { 
-        force, 
-        background: true 
+      const response = await axios.post(`${this.baseUrl}/indexing/start`, {
+        force,
+        background: true,
       });
       return response.data;
     } catch (error) {
-      console.error('Error indexing documents:', error);
+      console.error("Error indexing documents:", error);
       throw error;
     }
   }
@@ -154,7 +165,7 @@ class RagService {
       const response = await axios.post(`${this.baseUrl}/indexing/check`);
       return response.data;
     } catch (error) {
-      console.error('Error checking for updates:', error);
+      console.error("Error checking for updates:", error);
       throw error;
     }
   }
@@ -168,7 +179,7 @@ class RagService {
       const response = await axios.get(`${this.baseUrl}/indexing/status`);
       return response.data;
     } catch (error) {
-      console.error('Error getting indexing status:', error);
+      console.error("Error getting indexing status:", error);
       throw error;
     }
   }
@@ -180,10 +191,12 @@ class RagService {
    */
   async initialize(force = false) {
     try {
-      const response = await axios.post(`${this.baseUrl}/initialize`, { force });
+      const response = await axios.post(`${this.baseUrl}/initialize`, {
+        force,
+      });
       return response.data;
     } catch (error) {
-      console.error('Error initializing RAG service:', error);
+      console.error("Error initializing RAG service:", error);
       throw error;
     }
   }
@@ -198,11 +211,10 @@ class RagService {
       const status = await aiService.checkStatus();
       return status;
     } catch (error) {
-      console.error('Error checking AI service status:', error);
+      console.error("Error checking AI service status:", error);
       throw error;
     }
   }
 }
-
 
 module.exports = new RagService();

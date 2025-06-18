@@ -7,6 +7,7 @@ Support this project:<br>
 [![Ko-Fi](https://img.shields.io/badge/Ko--fi-F16061?style=for-the-badge&logo=ko-fi&logoColor=white)](https://ko-fi.com/clusterzx)
 
 ## Discord:
+
 ### [https://discord.gg/AvNekAfK38](https://discord.gg/AvNekAfK38)
 
 # Paperless-AI
@@ -15,6 +16,7 @@ An automated document analyzer for Paperless-ngx using OpenAI API, Ollama and al
 It features: Automode, Manual Mode, Ollama and OpenAI, a Chat function to query your documents with AI, a modern and intuitive Webinterface. \
 \
 **Following Services and OpenAI API compatible services have been successfully tested:**
+
 - Ollama
 - OpenAI
 - DeepSeek.ai
@@ -35,11 +37,12 @@ It features: Automode, Manual Mode, Ollama and OpenAI, a Chat function to query 
 > 🔍 **No more guessing. Just ask.**  
 > Want to know _“When did I receive my electricity contract?”_, _“How much did I pay for the last car repair?”_ or _“Which documents mention my health insurance?”_ — Paperless-AI will find it for you, even if you don’t remember the exact title, sender, or date.
 
-> 💡 **What does RAG bring to Paperless-NGX?**  
-> - True full-text understanding of your documents  
-> - Context-aware responses — beyond keyword search  
-> - Useful when dealing with large or chaotic document archives  
-> - Saves time, avoids frustration, and unlocks insights you may have forgotten you had stored  
+> 💡 **What does RAG bring to Paperless-NGX?**
+>
+> - True full-text understanding of your documents
+> - Context-aware responses — beyond keyword search
+> - Useful when dealing with large or chaotic document archives
+> - Saves time, avoids frustration, and unlocks insights you may have forgotten you had stored
 > - Blazingly fast answers backed by your own trusted data
 
 ![RAG_CHAT_DEMO](https://raw.githubusercontent.com/clusterzx/paperless-ai/refs/heads/main/ppairag.png)
@@ -47,34 +50,36 @@ It features: Automode, Manual Mode, Ollama and OpenAI, a Chat function to query 
 > ⚠️ **Important Note**: If you're installing Paperless-AI for the **first time**, please **restart the container after completing the setup routine** (where you enter your API keys and preferences). This ensures that all services initialize correctly and your RAG index is built properly.  
 > ➕ This step is **not required when updating** an existing installation.
 
-
 ![PPAI_SHOWCASE3](https://github.com/user-attachments/assets/1fc9f470-6e45-43e0-a212-b8fa6225e8dd)
-
 
 ## Features
 
 ### Automated Document Management
+
 - **Automatic Scanning**: Identifies and processes new documents within Paperless-ngx.
 - **AI-Powered Analysis**: Leverages OpenAI API and Ollama (Mistral, Llama, Phi 3, Gemma 2) for precise document analysis.
 - **Metadata Assignment**: Automatically assigns titles, tags, document_type and correspondent details.
 
 ### Advanced Customization Options
-- **Predefined Processing Rules**: Specify which documents to process based on existing tags. *(Optional)* 🆕
-- **Selective Tag Assignment**: Use only selected tags for processing. *(Disables the prompt dialog)* 🆕
+
+- **Predefined Processing Rules**: Specify which documents to process based on existing tags. _(Optional)_ 🆕
+- **Selective Tag Assignment**: Use only selected tags for processing. _(Disables the prompt dialog)_ 🆕
 - **Custom Tagging**: Assign a specific tag (of your choice) to AI-processed documents for easy identification. 🆕
 
 ### Manual Mode
-- **AI-Assisted Analysis**: Manually analyze documents with AI support in a modern web interface. *(Accessible via the `/manual` endpoint)* 🆕
+
+- **AI-Assisted Analysis**: Manually analyze documents with AI support in a modern web interface. _(Accessible via the `/manual` endpoint)_ 🆕
 
 ### Interactive Chat Functionality
+
 - **Document Querying**: Ask questions about your documents and receive accurate, AI-generated answers. 🆕
 
 ## Installation
 
 Visit the Wiki for installation:\
 [Click here for Installation](https://github.com/clusterzx/paperless-ai/wiki/2.-Installation)
--------------------------------------------
 
+---
 
 ## Docker Support
 
@@ -91,11 +96,13 @@ The application comes with full Docker support:
 To run the application locally without Docker:
 
 1. Install dependencies:
+
 ```bash
 npm install
 ```
 
 2. Start the development server:
+
 ```bash
 npm run test
 ```
@@ -133,4 +140,3 @@ If you encounter any issues or have questions:
 - [x] Advanced tag matching algorithms
 - [x] Custom rules for document processing
 - [x] Enhanced web interface with statistics
-
