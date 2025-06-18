@@ -1,20 +1,20 @@
 // services/chatService.js
-const OpenAIService = require('./openaiService');
-const PaperlessService = require('./paperlessService');
-const config = require('../config/config');
-const fs = require('fs');
-const path = require('path');
-const os = require('os');
-const stream = require('stream');
-const { promisify } = require('util');
+const OpenAIService = require("./openaiService");
+const PaperlessService = require("./paperlessService");
+const config = require("../config/config");
+const fs = require("fs");
+const path = require("path");
+const os = require("os");
+const stream = require("stream");
+const { promisify } = require("util");
 const pipeline = promisify(stream.pipeline);
-const { OpenAI } = require('openai');
+const { OpenAI } = require("openai");
 
 class ChatService {
   constructor() {
     this.chats = new Map(); // Stores chat histories: documentId -> messages[]
-    this.tempDir = path.join(os.tmpdir(), 'paperless-chat');
-    
+    this.tempDir = path.join(os.tmpdir(), "paperless-chat");
+
     // Create temporary directory if it doesn't exist
     if (!fs.existsSync(this.tempDir)) {
       fs.mkdirSync(this.tempDir, { recursive: true });
@@ -29,23 +29,26 @@ class ChatService {
   async downloadDocument(documentId) {
     try {
       const document = await PaperlessService.getDocument(documentId);
-      const tempFilePath = path.join(this.tempDir, `${documentId}_${document.original_filename}`);
-      
+      const tempFilePath = path.join(
+        this.tempDir,
+        `${documentId}_${document.original_filename}`,
+      );
+
       // Create download stream
-      const response = await PaperlessService.client.get(`/documents/${documentId}/download/`, {
-        responseType: 'stream'
-      });
+      const response = await PaperlessService.client.get(
+        `/documents/${documentId}/download/`,
+        {
+          responseType: "stream",
+        },
+      );
 
       // Save file temporarily
-      await pipeline(
-        response.data,
-        fs.createWriteStream(tempFilePath)
-      );
+      await pipeline(response.data, fs.createWriteStream(tempFilePath));
 
       return {
         filePath: tempFilePath,
         filename: document.original_filename,
-        mimeType: document.mime_type
+        mimeType: document.mime_type,
       };
     } catch (error) {
       console.error(`Error downloading document ${documentId}:`, error);
@@ -66,9 +69,12 @@ class ChatService {
       try {
         documentContent = await PaperlessService.getDocumentContent(documentId);
       } catch (error) {
-        console.warn('Could not get direct document content, trying file download...', error);
+        console.warn(
+          "Could not get direct document content, trying file download...",
+          error,
+        );
         const { filePath } = await this.downloadDocument(documentId);
-        documentContent = await fs.promises.readFile(filePath, 'utf8');
+        documentContent = await fs.promises.readFile(filePath, "utf8");
       }
 
       // Create initial system prompt
@@ -80,21 +86,24 @@ class ChatService {
                    If you don't know something or it's not in the document, please say so honestly.
                    
                    Document content:
-                   ${documentContent}`
-        }
+                   ${documentContent}`,
+        },
       ];
-      
+
       this.chats.set(documentId, {
         messages,
-        documentTitle: document.title
+        documentTitle: document.title,
       });
-      
+
       return {
         documentTitle: document.title,
-        initialized: true
+        initialized: true,
       };
     } catch (error) {
-      console.error(`Error initializing chat for document ${documentId}:`, error);
+      console.error(
+        `Error initializing chat for document ${documentId}:`,
+        error,
+      );
       throw error;
     }
   }
@@ -108,40 +117,40 @@ class ChatService {
       const chatData = this.chats.get(documentId);
       chatData.messages.push({
         role: "user",
-        content: userMessage
+        content: userMessage,
       });
 
       // Set headers for SSE
-      res.setHeader('Content-Type', 'text/event-stream');
-      res.setHeader('Cache-Control', 'no-cache');
-      res.setHeader('Connection', 'keep-alive');
+      res.setHeader("Content-Type", "text/event-stream");
+      res.setHeader("Cache-Control", "no-cache");
+      res.setHeader("Connection", "keep-alive");
 
-      let fullResponse = '';
+      let fullResponse = "";
       const aiProvider = process.env.AI_PROVIDER;
 
-      if (aiProvider === 'openai') {
+      if (aiProvider === "openai") {
         // Make sure OpenAIService is initialized
         OpenAIService.initialize();
-        
+
         // Always create a new client instance for this request to ensure it works
         const openai = new OpenAI({
-          apiKey: process.env.OPENAI_API_KEY
+          apiKey: process.env.OPENAI_API_KEY,
         });
-        
+
         const stream = await openai.chat.completions.create({
-          model: process.env.OPENAI_MODEL || 'gpt-4',
+          model: process.env.OPENAI_MODEL || "gpt-4",
           messages: chatData.messages,
           stream: true,
         });
-        
+
         for await (const chunk of stream) {
-          const content = chunk.choices[0]?.delta?.content || '';
+          const content = chunk.choices[0]?.delta?.content || "";
           if (content) {
             fullResponse += content;
             res.write(`data: ${JSON.stringify({ content })}\n\n`);
           }
         }
-      } else if (aiProvider === 'custom') {
+      } else if (aiProvider === "custom") {
         // Use OpenAI SDK with custom base URL
         const customOpenAI = new OpenAI({
           baseURL: process.env.CUSTOM_BASE_URL,
@@ -153,20 +162,20 @@ class ChatService {
           messages: chatData.messages,
           stream: true,
         });
-        
+
         for await (const chunk of stream) {
-          const content = chunk.choices[0]?.delta?.content || '';
+          const content = chunk.choices[0]?.delta?.content || "";
           if (content) {
             fullResponse += content;
             res.write(`data: ${JSON.stringify({ content })}\n\n`);
           }
         }
-      } else if (aiProvider === 'azure') {
+      } else if (aiProvider === "azure") {
         // Use OpenAI SDK with Azure configuration
         const azureOpenAI = new OpenAI({
           apiKey: process.env.AZURE_API_KEY,
           baseURL: `${process.env.AZURE_ENDPOINT}/openai/deployments/${process.env.AZURE_DEPLOYMENT_NAME}`,
-          defaultQuery: { 'api-version': process.env.AZURE_API_VERSION },
+          defaultQuery: { "api-version": process.env.AZURE_API_VERSION },
         });
 
         const stream = await azureOpenAI.chat.completions.create({
@@ -174,19 +183,19 @@ class ChatService {
           messages: chatData.messages,
           stream: true,
         });
-        
+
         for await (const chunk of stream) {
-          const content = chunk.choices[0]?.delta?.content || '';
+          const content = chunk.choices[0]?.delta?.content || "";
           if (content) {
             fullResponse += content;
             res.write(`data: ${JSON.stringify({ content })}\n\n`);
           }
         }
-      } else if (aiProvider === 'ollama') {
+      } else if (aiProvider === "ollama") {
         // Use OpenAI SDK for Ollama with OpenAI API compatibility
         const ollamaOpenAI = new OpenAI({
           baseURL: `${process.env.OLLAMA_API_URL}/v1`,
-          apiKey: 'ollama', // Ollama doesn't require a real API key but the SDK requires some value
+          apiKey: "ollama", // Ollama doesn't require a real API key but the SDK requires some value
         });
 
         const stream = await ollamaOpenAI.chat.completions.create({
@@ -194,29 +203,28 @@ class ChatService {
           messages: chatData.messages,
           stream: true,
         });
-        
+
         for await (const chunk of stream) {
-          const content = chunk.choices[0]?.delta?.content || '';
+          const content = chunk.choices[0]?.delta?.content || "";
           if (content) {
             fullResponse += content;
             res.write(`data: ${JSON.stringify({ content })}\n\n`);
           }
         }
       } else {
-        throw new Error('AI Provider not configured');
+        throw new Error("AI Provider not configured");
       }
 
       // Add the complete response to chat history
       chatData.messages.push({
         role: "assistant",
-        content: fullResponse
+        content: fullResponse,
       });
       this.chats.set(documentId, chatData);
 
       // End the stream
-      res.write('data: [DONE]\n\n');
+      res.write("data: [DONE]\n\n");
       res.end();
-
     } catch (error) {
       console.error(`Error in sendMessageStream:`, error);
       res.write(`data: ${JSON.stringify({ error: error.message })}\n\n`);
@@ -242,7 +250,7 @@ class ChatService {
         await fs.promises.rmdir(this.tempDir, { recursive: true });
       }
     } catch (error) {
-      console.error('Error cleaning up ChatService:', error);
+      console.error("Error cleaning up ChatService:", error);
     }
   }
 }

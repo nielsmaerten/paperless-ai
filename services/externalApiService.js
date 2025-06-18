@@ -1,5 +1,5 @@
-const axios = require('axios');
-const config = require('../config/config');
+const axios = require("axios");
+const config = require("../config/config");
 
 /**
  * Service for fetching data from external APIs to enrich AI prompts
@@ -12,22 +12,25 @@ class ExternalApiService {
   async fetchData() {
     try {
       // Check if external API integration is enabled
-      if (!config.externalApiConfig || config.externalApiConfig.enabled !== 'yes') {
-        console.log('[DEBUG] External API integration is disabled');
+      if (
+        !config.externalApiConfig ||
+        config.externalApiConfig.enabled !== "yes"
+      ) {
+        console.log("[DEBUG] External API integration is disabled");
         return null;
       }
 
       const {
         url,
-        method = 'GET',
+        method = "GET",
         headers = {},
         body = {},
         timeout = 5000,
-        transform
+        transform,
       } = config.externalApiConfig;
 
       if (!url) {
-        console.error('[ERROR] External API URL not configured');
+        console.error("[ERROR] External API URL not configured");
         return null;
       }
 
@@ -35,22 +38,28 @@ class ExternalApiService {
 
       // Parse headers if they're a string
       let parsedHeaders = headers;
-      if (typeof headers === 'string') {
+      if (typeof headers === "string") {
         try {
           parsedHeaders = JSON.parse(headers);
         } catch (error) {
-          console.error('[ERROR] Failed to parse external API headers:', error.message);
+          console.error(
+            "[ERROR] Failed to parse external API headers:",
+            error.message,
+          );
           parsedHeaders = {};
         }
       }
 
       // Parse body if it's a string
       let parsedBody = body;
-      if (typeof body === 'string' && (method === 'POST' || method === 'PUT')) {
+      if (typeof body === "string" && (method === "POST" || method === "PUT")) {
         try {
           parsedBody = JSON.parse(body);
         } catch (error) {
-          console.error('[ERROR] Failed to parse external API body:', error.message);
+          console.error(
+            "[ERROR] Failed to parse external API body:",
+            error.message,
+          );
           parsedBody = {};
         }
       }
@@ -64,7 +73,7 @@ class ExternalApiService {
       };
 
       // Add request body for POST/PUT requests
-      if (method === 'POST' || method === 'PUT') {
+      if (method === "POST" || method === "PUT") {
         options.data = parsedBody;
       }
 
@@ -73,22 +82,32 @@ class ExternalApiService {
       let data = response.data;
 
       // Apply transform function if provided
-      if (transform && typeof transform === 'string') {
+      if (transform && typeof transform === "string") {
         try {
           // Create a safe transform function
-          const transformFn = new Function('data', transform);
+          const transformFn = new Function("data", transform);
           data = transformFn(data);
-          console.log('[DEBUG] Successfully transformed external API data');
+          console.log("[DEBUG] Successfully transformed external API data");
         } catch (error) {
-          console.error('[ERROR] Failed to execute transform function:', error.message);
+          console.error(
+            "[ERROR] Failed to execute transform function:",
+            error.message,
+          );
         }
       }
 
       return data;
     } catch (error) {
-      console.error('[ERROR] Failed to fetch data from external API:', error.message);
+      console.error(
+        "[ERROR] Failed to fetch data from external API:",
+        error.message,
+      );
       if (error.response) {
-        console.error('[ERROR] API Response:', error.response.status, error.response.data);
+        console.error(
+          "[ERROR] API Response:",
+          error.response.status,
+          error.response.data,
+        );
       }
       return null;
     }

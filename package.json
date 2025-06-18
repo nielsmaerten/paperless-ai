@@ -4,7 +4,12 @@
   "description": "AI based Tag, correspondent and meta data generation",
   "main": "server.js",
   "scripts": {
-    "test": "nodemon server.js"
+    "test": "nodemon server.js",
+    "lint": "eslint",
+    "lint:fix": "eslint --fix",
+    "prettier": "prettier --check **/*.{js,json,md,css}",
+    "format": "prettier --write **/*.{js,json,md,css}",
+    "fix": "npm run format && npm run lint:fix"
   },
   "keywords": [
     "paperless-ngx",
