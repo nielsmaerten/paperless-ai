@@ -85,105 +85,31 @@ class OllamaService {
    * @param {Array} existingTags - List of existing tags
    * @param {Array} existingCorrespondentList - List of existing correspondents
    * @param {string} id - Document ID
-   * @param {string} customPrompt - Custom prompt (optional)
-   * @returns {Object} Analysis results
    */
   async analyzeDocument(
     content,
     existingTags = [],
     existingCorrespondentList = [],
     id,
-    customPrompt = null,
-    options = {},
   ) {
     try {
       // Truncate content if needed
       content = this._truncateContent(content);
+      content = JSON.stringify(content);
 
       // Cache thumbnail
       await this._handleThumbnailCaching(id);
 
-      // Get external API data if available and validate it
-      let externalApiData = options.externalApiData || null;
-      let validatedExternalApiData = null;
-
-      if (externalApiData) {
-        try {
-          validatedExternalApiData =
-            await this._validateAndTruncateExternalApiData(externalApiData);
-          console.log("[DEBUG] External API data validated and included");
-        } catch (error) {
-          console.warn(
-            "[WARNING] External API data validation failed:",
-            error.message,
-          );
-          validatedExternalApiData = null;
-        }
-      }
-
-      // Build prompt
-      let prompt;
-      if (!customPrompt) {
-        prompt = this._buildPrompt(
-          content,
-          existingTags,
-          existingCorrespondentList,
-          options,
-        );
-      } else {
-        // Parse CUSTOM_FIELDS for custom prompt
-        let customFieldsObj;
-        try {
-          customFieldsObj = JSON.parse(process.env.CUSTOM_FIELDS);
-        } catch (error) {
-          console.error("Failed to parse CUSTOM_FIELDS:", error);
-          customFieldsObj = { custom_fields: [] };
-        }
-
-        const customFieldsTemplate = {};
-        customFieldsObj.custom_fields.forEach((field, index) => {
-          customFieldsTemplate[index] = {
-            field_name: field.value,
-            value: "Fill in the value based on your analysis",
-          };
-        });
-
-        const customFieldsStr =
-          '"custom_fields": ' +
-          JSON.stringify(customFieldsTemplate, null, 2)
-            .split("\n")
-            .map((line) => "    " + line)
-            .join("\n");
-
-        prompt =
-          customPrompt +
-          "\n\n" +
-          config.mustHavePrompt.replace("%CUSTOMFIELDS%", customFieldsStr) +
-          "\n\n" +
-          JSON.stringify(content);
-        console.log("[DEBUG] Ollama Service started with custom prompt");
-      }
-
-      // Generate custom fields for the prompt
-      const customFieldsStr = this._generateCustomFieldsTemplate();
-
       // Generate system prompt
-      const systemPrompt = this._generateSystemPrompt(customFieldsStr);
+      const systemPrompt = this._generateSystemPrompt(existingTags, existingCorrespondentList);
 
       // Calculate context window size
-      const promptTokenCount = this._calculatePromptTokenCount(prompt);
+      const promptTokenCount = this._calculatePromptTokenCount(content);
       const numCtx = this._calculateNumCtx(promptTokenCount, 1024);
-
-      console.log(
-        `[DEBUG] Use existing data: ${config.useExistingData}, Restrictions applied based on useExistingData setting`,
-      );
-      console.log(
-        `[DEBUG] External API data: ${validatedExternalApiData ? "included" : "none"}`,
-      );
 
       // Call Ollama API
       const response = await this._callOllamaAPI(
-        prompt,
+        content,
         systemPrompt,
         numCtx,
         this.documentAnalysisSchema,
@@ -203,7 +129,7 @@ class OllamaService {
       }
 
       // Log the prompt and response
-      await this._logPromptAndResponse(prompt, parsedResponse);
+      await this._logPromptAndResponse(content + "\n\n" + JSON.stringify(parsedResponse), parsedResponse);
 
       // Return results in consistent format
       return {
@@ -358,9 +284,9 @@ class OllamaService {
       // Format existing tags
       const existingTagsList = Array.isArray(existingTags)
         ? existingTags
-            .filter((tag) => tag && tag.name)
-            .map((tag) => tag.name)
-            .join(", ")
+          .filter((tag) => tag && tag.name)
+          .map((tag) => tag.name)
+          .join(", ")
         : "";
 
       // Format existing correspondents - handle both array of objects and array of strings
@@ -554,30 +480,17 @@ class OllamaService {
 
   /**
    * Generate system prompt for document analysis
-   * @param {string} customFieldsStr - Custom fields as a string
-   * @returns {string} System prompt
    */
-  _generateSystemPrompt(customFieldsStr) {
-    let systemPromptTemplate = `
-            You are a document analyzer. Your task is to analyze documents and extract relevant information. You do not ask back questions. 
-            YOU MUSTNOT: Ask for additional information or clarification, or ask questions about the document, or ask for additional context.
-            YOU MUSTNOT: Return a response without the desired JSON format.
-            YOU MUST: Return the result EXCLUSIVELY as a JSON object. The Tags, Title and Document_Type MUST be in the language that is used in the document.:
-            IMPORTANT: The custom_fields are optional and can be left out if not needed, only try to fill out the values if you find a matching information in the document.
-            Do not change the value of field_name, only fill out the values. If the field is about money only add the number without currency and always use a . for decimal places.
-            {
-                "title": "xxxxx",
-                "correspondent": "xxxxxxxx",
-                "tags": ["Tag1", "Tag2", "Tag3", "Tag4"],
-                "document_type": "Invoice/Contract/...",
-                "document_date": "YYYY-MM-DD",
-                "language": "en/de/es/...",
-                %CUSTOMFIELDS%
-            }
-            ALWAYS USE THE INFORMATION TO FILL OUT THE JSON OBJECT. DO NOT ASK BACK QUESTIONS.
-        `;
+  _generateSystemPrompt(existingTags, existingCorrespondentList) {
+    // Format existing tags & correspondent list as comma separated lists
+    const existingTagsList = existingTags.join(", ");
+    const existingCorrespondentListStr = existingCorrespondentList.join(", ");
 
-    return systemPromptTemplate.replace("%CUSTOMFIELDS%", customFieldsStr);
+
+    return process.env.SYSTEM_PROMPT // start from the basic promt defined in settings
+      .replace("%EXISTINGTAGS%", existingTagsList)
+      .replace("%EXISTINGCORRESPONDENTS%", existingCorrespondentListStr);
+
   }
 
   /**
